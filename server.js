@@ -2,6 +2,13 @@ const express = require('express');
 const path = require('path');
 const morgan = require('morgan');
 const nunjucks = require('nunjucks');
+const cors = require('cors');
+
+//     res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
+//     res.setHeader('X-Total-Count',data.length);
+//     res.json(data);
+
+app.use(cors());
 
 const { sequelize } = require('./models'); // db.sequelize
 

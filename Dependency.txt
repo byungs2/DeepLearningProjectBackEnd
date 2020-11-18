@@ -1,3 +1,4 @@
 폴더 경로> npm i express morgan nunjucks sequelize sequelize-cli mysql2
 폴더 경로> npm i -D nodemon
 폴더 경로> npx sequelize init
+폴더 경로> npm install cors
