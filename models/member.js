@@ -3,7 +3,7 @@ const Sequelize = require('sequelize');
 class Member extends Sequelize.Model {
     static init(sequelize) {
         return super.init({
-            memberNo: {
+            id: {
                 type: Sequelize.INTEGER,
                 primaryKey: true,
                 autoIncrement : true,

@@ -3,7 +3,7 @@ const Sequelize = require('sequelize');
 class Admin extends Sequelize.Model {
     static init(sequelize) {
         return super.init({
-            adminNo: {
+            id: {
                 type: Sequelize.INTEGER,
                 primaryKey: true,
                 autoIncrement : true,
