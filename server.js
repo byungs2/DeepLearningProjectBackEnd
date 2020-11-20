@@ -21,6 +21,8 @@ const storageSet = multer.diskStorage({
         cb(null,'./faceImages');
     },
     filename: function (req, file, cb){
+        console.log(req);
+        console.log(" === UPLOAD RUNNING === ")
         cb(null, "first.jpg");//file.originalname);
     }
 })
@@ -112,7 +114,17 @@ app.get('/member', async (req,res) => {
 
 // Create one
 app.post('/member',upload.single('memberFace'),async (req,res) => {
+    if(!req.file){
+        console.log(" ========== plz upload file ==========");
+    }
+    console.log(req.method);
+    console.log(req.body);
+    console.log(req.body.memberFace);
+    console.log(req.params);
+    console.log(" ============ RUN Create  =========== ");
     const urlPath = URL + req.url + "/" + req.file.path;
+    console.log(req.file);
+    console.log(req.file.path);
     console.log(urlPath);
     try {
         const member = await Member.create({
