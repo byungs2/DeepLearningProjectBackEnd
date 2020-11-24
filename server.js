@@ -92,7 +92,7 @@ app.get('/member/faceImages/:imageName', async (req, res) => {
     } catch (error) {
         console.log(error);
     }
-})
+});
 
 // 1. member entity
 
@@ -112,20 +112,21 @@ app.get('/member', async (req,res) => {
 // Create one
 app.post('/member',upload.single('memberFace'),async (req,res) => {
     if(!req.file){
-        console.log(" ========== plz upload type file ==========");
-    }
-    console.log(" ============ RUN Create  =========== ");
-    const urlPath = URL + req.url + "/" + req.file.path;
-    try {
-        const member = await Member.create({
-            memberName : req.body.memberName,
-            memberCount : req.body.memberCount,
-            memberFace : urlPath,
-        });
-        console.log(member);
-        res.status(201).json(member);
-    } catch (error) {
-        console.log(error);
+        console.log(req.body);
+        res.status(201).json(req.body);
+    }else{
+        console.log(" ============ RUN Create  =========== ");
+        const urlPath = URL + req.url + "/" + req.file.path;
+        try {
+            const member = await Member.create({
+                memberName : req.body.memberName,
+                memberCount : req.body.memberCount,
+                memberFace : urlPath,
+            });
+            res.status(201).json(member);
+        } catch (error) {
+            console.log(error);
+        }
     }
 });
 
@@ -135,7 +136,7 @@ app.patch('url', async (req,res) => {
     res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
     res.setHeader('X-Total-Count',data.length);
     res.json(data);
-})
+});
 
 // Delete one
 app.delete('url', async (req, res) => {
@@ -143,7 +144,31 @@ app.delete('url', async (req, res) => {
     res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
     res.setHeader('X-Total-Count',data.length);
     res.json(data);
-})
+});
+
+// Get one
+app.get('/member/:memberId', async (req, res) => {
+    try {
+        const memberId = req.params.memmberId;
+        const member = await Member.findByPk(memberId);
+        const idx = member.memberFace.indexOf('faceImages');
+        const imagePath = member.memberFace.substring(idx);
+        const imageMime = mime.getType(imagePath);
+        console.log(imagePath);
+        fs.readFile(imagePath, (err,data) => {
+            if(err){
+                res.writeHead(500,{'Content-Type':'text/html'});
+                res.end('500 Internal Server '+error);
+            }else{
+                res.writeHead(200, {'Content-Type':imageMime});
+                res.end(data);
+            }
+        });
+    } catch (error) {
+        console.log(error);
+    }
+});
+
 
 // 2. state entity
 app.get('url', async (req,res) => {
