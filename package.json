@@ -1,0 +1,12 @@
+{
+  "name": "Backend",
+  "version": "1.0.0",
+  "dependencies": {
+    "mysql2": "^2.2.5",
+    "sequelize-cli": "^6.2.0",
+    "yarn": "^1.22.10"
+  },
+  "devDependencies": {
+    "sequelize": "^6.3.5"
+  }
+}

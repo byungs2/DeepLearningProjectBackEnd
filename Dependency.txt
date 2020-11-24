@@ -4,3 +4,18 @@ cd 프로젝트 폴더 경로> npx sequelize init
 cd 프로젝트 폴더 경로> npm install cors
 cd 프로젝트 폴더 경로> npm install mime
 cd 프로젝트 폴더 경로> npm install --save multer
+
+
+npm install yarn
+
+yarn add sequelize sequelize-cli mysql2
+
+./node_modules/.bin/sequelize 실
+
+./node_modules/.bin/sequelize init
+
+node_modules/.bin/sequelize model:generate --name User --attributes
+
+
+error
+ERROR: Access denied for user 'root'@'localhost' (using password: NO)
