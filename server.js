@@ -118,12 +118,23 @@ app.post('/member',upload.single('memberFace'),async (req,res) => {
         console.log(" ============ RUN Create  =========== ");
         const urlPath = URL + req.url + "/" + req.file.path;
         try {
-            const member = await Member.create({
-                memberName : req.body.memberName,
-                memberCount : req.body.memberCount,
-                memberFace : urlPath,
-            });
-            res.status(201).json(member);
+            if(req.body.memberCount === "undefined"){
+                console.log(req.body.memberCount + "=========== null=====" + typeof(req.body.memberCount));
+                const member = await Member.create({
+                    memberName : req.body.memberName,
+                    memberCount : 0,
+                    memberFace : urlPath,
+                });
+                res.status(201).json(member);
+            }else{
+                console.log(req.body.memberCount + "======== not null ======"+ typeof(req.body.memberCount));
+                const member = await Member.create({
+                    memberName : req.body.memberName,
+                    memberCount : req.body.memberCount,
+                    memberFace : urlPath,
+                });
+                res.status(201).json(member);
+            }
         } catch (error) {
             console.log(error);
         }
@@ -132,7 +143,7 @@ app.post('/member',upload.single('memberFace'),async (req,res) => {
 
 // Update one 
 app.patch('url', async (req,res) => {
-
+    
     res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
     res.setHeader('X-Total-Count',data.length);
     res.json(data);

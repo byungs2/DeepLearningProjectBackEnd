@@ -12,10 +12,6 @@ class State extends Sequelize.Model {
                 type: Sequelize.DATE,
                 allowNull : false,
             },
-            stateMask: {
-                type : Sequelize.STRING.BINARY,
-                allowNull : false,
-            },
             stateNote: {
                 type : Sequelize.STRING(100),
                 allowNull : true,
