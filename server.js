@@ -222,24 +222,62 @@ app.get('/state', async (req,res) => {
 });
 
 // Create One
-app.post('url', async (req,res) => {
-
-
+app.post('/state', async (req,res) => {
+    try {
+        if(req.body.stateNote === "undefined"){
+            const state = await State.create({
+                stateNote : ' ',
+            })
+            res.json(state);
+        }else{
+            const state = await State.create({
+                stateNote : req.body.stateNote,
+            })
+            res.json(state);
+        }
+    } catch (error) {   
+        console.log(error);
+    }
     res.json(data);
 });
 
 // Update One
-app.patch('url', async (req,res) => {
+app.put('/state/:stateId', async (req,res) => {
+    try {
+        const stateId = req.params.stateId;
+        const result = await State.update({
+            stateNote : req.body.stateNote,
+        }, {
+            where : { id : stateId }
+        })
+        const state = await State.findByPk(stateId);
+        res.json(state);
+    } catch (error) {
+        console.log(error);
+    }
+});
 
+app.delete('/state/:stateId', async (req, res) => {
+    try {
+        const stateId = req.params.stateId;
+        const result = await State.destroy({ where : { id : stateId }});
+        res.json(result)
+    } catch (error) {
+        console.log(error);
+    }
+});
 
-    res.json(data);
-})
+// Get one
+app.get('/state/:stateId', async (req, res) => {
+    try {
+        const stateId = req.params.stateId;
+        const state = await State.findByPk(stateId);
+        res.json(state);
+    } catch (error) {
+        console.log(error);
+    }
+});
 
-app.delete('url', async (req, res) => {
-
-
-    res.json(data);
-})
 
 // 3. admin entity
 app.get('url', async (req,res) => {
@@ -255,7 +293,7 @@ app.post('url', async (req,res) => {
     res.json(data);
 });
 
-app.patch('url', async (req,res) => {
+app.put('url', async (req,res) => {
 
 
     res.json(data);
