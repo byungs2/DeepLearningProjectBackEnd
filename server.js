@@ -34,6 +34,7 @@ const URL = "http://localhost:8082";
 app.use(cors());
 
 const { sequelize } = require('./models'); // db.sequelize
+const { UV_FS_O_FILEMAP } = require('constants');
 
 //MySQL DB와 연동
 app.set('port', process.env.PORT || 8082);
@@ -138,19 +139,59 @@ app.post('/member',upload.single('memberFace'),async (req,res) => {
 });
 
 // Update one 
-app.patch('url', async (req,res) => {
-    
-    res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
-    res.setHeader('X-Total-Count',data.length);
-    res.json(data);
+app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) => {
+    if(!req.file){
+        const memberId = req.params.memberId;
+        const member = await Member.findByPk(memberId);
+        const result = await Member.update({
+            memberName: req.body.memberName,
+            memberCount : req.body.memberCount,
+            memberFace : member.memberFace,
+        }, {
+            where: { id: memberId },
+        });
+        const updatedMember = await Member.findByPk(memberId);
+        res.status(201).json(updatedMember);
+    }else{
+        try {
+            const memberId = req.params.memberId;
+            const member = await Member.findByPk(memberId);
+            const idx = member.memberFace.indexOf('faceImage');
+            const imagePath = member.memberFace.substring(idx);
+            if(req.file.path !== imagePath){
+                fs.unlink(imagePath, (err,data)=>{
+                    if(err){
+                        console.log(err);
+                    }else{
+                        console.log("===== delete image complete =====");
+                    }
+                })
+            }
+            const urlPath = URL + '/member/' + req.file.path;
+            const result = await Member.update({
+                memberName: req.body.memberName,
+                memberCount : req.body.memberCount,
+                memberFace : urlPath,
+            }, {
+                where: { id: memberId },
+            });
+            const updatedMember = await Member.findByPk(memberId);
+            res.json(updatedMember);
+        } catch (err) {
+            console.log(error);
+        }
+    }
 });
 
 // Delete one
-app.delete('url', async (req, res) => {
-
-    res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
-    res.setHeader('X-Total-Count',data.length);
-    res.json(data);
+app.delete('/member/:memberId', async (req, res) => {
+    try {
+        const memberId = req.params.memberId;
+        const result = await Member.destroy({where : { id : memberId}});
+        res.json(result);
+    } catch (error) {
+        console.log(error);
+    }
 });
 
 // Get one
@@ -166,31 +207,37 @@ app.get('/member/:memberId', async (req, res) => {
 
 
 // 2. state entity
-app.get('url', async (req,res) => {
 
-    res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
-    res.setHeader('X-Total-Count',data.length);
-    res.json(data);
+// Read all
+app.get('/state', async (req,res) => {
+    try {
+        const states = await State.findAll();
+        //Header Setting
+        res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
+        res.setHeader('X-Total-Count',states.length);
+        res.json(states);
+    } catch (error) {
+        console.log(error);
+    }
 });
 
+// Create One
 app.post('url', async (req,res) => {
 
-    res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
-    res.setHeader('X-Total-Count',data.length);
+
     res.json(data);
 });
 
+// Update One
 app.patch('url', async (req,res) => {
 
-    res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
-    res.setHeader('X-Total-Count',data.length);
+
     res.json(data);
 })
 
 app.delete('url', async (req, res) => {
 
-    res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
-    res.setHeader('X-Total-Count',data.length);
+
     res.json(data);
 })
 
@@ -204,22 +251,19 @@ app.get('url', async (req,res) => {
 
 app.post('url', async (req,res) => {
 
-    res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
-    res.setHeader('X-Total-Count',data.length);
+
     res.json(data);
 });
 
 app.patch('url', async (req,res) => {
 
-    res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
-    res.setHeader('X-Total-Count',data.length);
+
     res.json(data);
 })
 
 app.delete('url', async (req, res) => {
 
-    res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
-    res.setHeader('X-Total-Count',data.length);
+
     res.json(data);
 })
 
