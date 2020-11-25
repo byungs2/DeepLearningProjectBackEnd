@@ -112,14 +112,11 @@ app.get('/member', async (req,res) => {
 // Create one
 app.post('/member',upload.single('memberFace'),async (req,res) => {
     if(!req.file){
-        console.log(req.body);
         res.status(201).json(req.body);
     }else{
-        console.log(" ============ RUN Create  =========== ");
         const urlPath = URL + req.url + "/" + req.file.path;
         try {
             if(req.body.memberCount === "undefined"){
-                console.log(req.body.memberCount + "=========== null=====" + typeof(req.body.memberCount));
                 const member = await Member.create({
                     memberName : req.body.memberName,
                     memberCount : 0,
@@ -127,7 +124,6 @@ app.post('/member',upload.single('memberFace'),async (req,res) => {
                 });
                 res.status(201).json(member);
             }else{
-                console.log(req.body.memberCount + "======== not null ======"+ typeof(req.body.memberCount));
                 const member = await Member.create({
                     memberName : req.body.memberName,
                     memberCount : req.body.memberCount,
@@ -160,21 +156,9 @@ app.delete('url', async (req, res) => {
 // Get one
 app.get('/member/:memberId', async (req, res) => {
     try {
-        const memberId = req.params.memmberId;
+        const memberId = req.params.memberId;
         const member = await Member.findByPk(memberId);
-        const idx = member.memberFace.indexOf('faceImages');
-        const imagePath = member.memberFace.substring(idx);
-        const imageMime = mime.getType(imagePath);
-        console.log(imagePath);
-        fs.readFile(imagePath, (err,data) => {
-            if(err){
-                res.writeHead(500,{'Content-Type':'text/html'});
-                res.end('500 Internal Server '+error);
-            }else{
-                res.writeHead(200, {'Content-Type':imageMime});
-                res.end(data);
-            }
-        });
+        res.json(member);
     } catch (error) {
         console.log(error);
     }
