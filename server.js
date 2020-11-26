@@ -187,6 +187,16 @@ app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) =
 app.delete('/member/:memberId', async (req, res) => {
     try {
         const memberId = req.params.memberId;
+        const member = await Member.findOne({where : { id : memberId}});
+        const idx = member.memberFace.indexOf('faceImage');
+        const imagePath = member.memberFace.substring(idx);
+        fs.unlink(imagePath, (err,data)=>{
+            if(err){
+                console.log(err);
+            }else{
+                console.log("===== delete image complete =====");
+            }
+        })
         const result = await Member.destroy({where : { id : memberId}});
         res.json(result);
     } catch (error) {
@@ -224,21 +234,26 @@ app.get('/state', async (req,res) => {
 // Create One
 app.post('/state', async (req,res) => {
     try {
-        if(req.body.stateNote === "undefined"){
+        const memberId = req.body.data.memberId;
+        const member = await Member.findOne({where : { id : memberId}});
+        if(req.body.data.stateNote === "undefined"){
             const state = await State.create({
                 stateNote : ' ',
+                stateTime : Date.now()
             })
+            member.addState(state);
             res.json(state);
         }else{
             const state = await State.create({
-                stateNote : req.body.stateNote,
+                stateNote : req.body.data.stateNote,
+                stateTime : Date.now(),
             })
+            member.addState(state);
             res.json(state);
         }
     } catch (error) {   
         console.log(error);
     }
-    res.json(data);
 });
 
 // Update One
@@ -246,7 +261,8 @@ app.put('/state/:stateId', async (req,res) => {
     try {
         const stateId = req.params.stateId;
         const result = await State.update({
-            stateNote : req.body.stateNote,
+            stateNote : req.body.data.stateNote,
+            stateDate : Date.now(),
         }, {
             where : { id : stateId }
         })
@@ -257,6 +273,7 @@ app.put('/state/:stateId', async (req,res) => {
     }
 });
 
+// Delete One
 app.delete('/state/:stateId', async (req, res) => {
     try {
         const stateId = req.params.stateId;
@@ -280,30 +297,99 @@ app.get('/state/:stateId', async (req, res) => {
 
 
 // 3. admin entity
-app.get('url', async (req,res) => {
 
-    res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
-    res.setHeader('X-Total-Count',data.length);
-    res.json(data);
+// Read all
+app.get('/admin', async (req,res) => {
+    try {
+        const admins = await Admin.findAll();
+        //Header Setting
+        res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
+        res.setHeader('X-Total-Count',admins.length);
+        res.json(admins);
+    } catch (error) {
+        console.log(error);
+    }
 });
 
-app.post('url', async (req,res) => {
-
-
-    res.json(data);
+// Create One
+app.post('/admin', async (req,res) => {
+    try {
+        const adminId = req.body.data.adminId;
+        const existingAdmin = await Admin.findOne({where : {adminId : adminId}});
+        if(existingAdmin !== null){
+            res.status(406).json(existingAdmin);
+        }else{
+            const admin = await Admin.create({
+                adminId : req.body.data.adminId,
+                adminPw : req.body.data.adminPw
+            });
+            res.json(admin);
+        }
+    } catch (error) {   
+        console.log(error);
+    }
 });
 
-app.put('url', async (req,res) => {
+// Update One
+app.put('/admin/:adminId', async (req,res) => {
+    try {
+        const adminId = req.params.adminId;
+        const existingPw = req.body.data.existingPw;
+        const existingAdmin = await Admin.findByPk(adminId);
+        if(existingAdmin.adminPw !== existingPw){
+            res.status(406).json(existingAdmin);
+        }else{
+            const result = await Admin.update({
+                adminId : req.body.data.adminId,
+                adminPw : req.body.data.adminPw,
+            }, {
+                where : { id : adminId }
+            })
+            const admin = await Admin.findByPk(adminId);
+            res.json(admin);
+        }
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+// Delete One
+app.delete('/admin/:adminId', async (req, res) => {
+    try {
+        const adminId = req.params.adminId;
+        const result = await Admin.destroy({ where : { id : adminId }});
+        res.json(result)
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+// Get one
+app.get('/admin/:adminId', async (req, res) => {
+    try {
+        const adminId = req.params.adminId;
+        const admin = await Admin.findByPk(adminId);
+        res.json(admin);
+    } catch (error) {
+        console.log(error);
+    }
+});
 
 
-    res.json(data);
-})
-
-app.delete('url', async (req, res) => {
-
-
-    res.json(data);
-})
+// Log in function
+app.get('/login/:adminId', async (req,res) => {
+    const adminId = req.params.adminId;
+    try {
+        const admin = await Admin.findOne({where : {adminId : adminId}});
+        if(!admin){
+            res.status(406);
+        }else{
+            res.json(admin);
+        }
+    } catch (error) {
+        console.log(error);
+    }
+});
 
 app.listen(app.get('port'), () => {
     console.log(app.get('port'), '번 포트에서 대기 중');

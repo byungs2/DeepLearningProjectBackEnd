@@ -8,17 +8,17 @@ class State extends Sequelize.Model {
                 primaryKey: true,
                 autoIncrement : true,
             },
-            // stateTime: {
-            //     type: Sequelize.DATE,
-            //     allowNull : false,
-            // },
+            stateTime: {
+                type: Sequelize.DATE,
+                allowNull : false,
+            },
             stateNote: {
                 type : Sequelize.STRING(100),
                 allowNull : true,
             },
         }, {
             sequelize,
-            timestamps: true,
+            timestamps: false,
             underscored: false,
             modelName: 'State',
             tableName: 'states',
