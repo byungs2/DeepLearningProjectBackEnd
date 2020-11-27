@@ -7,6 +7,7 @@ const fs = require('fs');
 const mime = require('mime');
 const multer = require('multer');
 const cors = require('cors');
+const getRandomValues = require('get-random-values');
 const Member = require('./models/member');
 const Admin = require('./models/admin');
 const State = require('./models/state');
@@ -47,9 +48,34 @@ app.set('port', process.env.PORT || 8082);
 // });
 
 
+
 sequelize.sync({ force: false })
     .then(() => {
-        console.log('데이터베이스 연결됨.');
+        const masterPassword = new Uint8Array(10);
+        getRandomValues(masterPassword);
+        let existingMaster = null;
+        Admin.findOne({where : {adminId : "master"}}).then(function(res){
+            existingMaster = res;
+            if(existingMaster !== null){
+                console.log("master update");
+                Admin.update({
+                    adminId : "master",
+                    adminPw : masterPassword.toString()
+                },{ where : {adminId : "master"}});
+                console.log('Master Admin Pw 수정됨 ');
+            }else{
+                console.log("master create");
+                Admin.create({
+                    adminId : "master",
+                    adminPw : masterPassword.toString()
+                });
+                console.log('Master Admin 생성됨');
+            }
+            console.log("==== masterId : master ====");
+            console.log("==== masterPw : " + masterPassword.toString() + " ====");
+            console.log("==== YOU SHOULD TYPE EVERY COMMA IN MASTER PASSWORD TO GET AUTH ===");
+        });
+        console.log('데이터베이스 연결됨');
     }).catch((err) => {
         console.error(err);
     });
@@ -236,20 +262,24 @@ app.post('/state', async (req,res) => {
     try {
         const memberId = req.body.data.memberId;
         const member = await Member.findOne({where : { id : memberId}});
-        if(req.body.data.stateNote === "undefined"){
-            const state = await State.create({
-                stateNote : ' ',
-                stateTime : Date.now()
-            })
-            member.addState(state);
-            res.json(state);
+        if(member !== null){
+            if(req.body.data.stateNote === "undefined"){
+                const state = await State.create({
+                    stateNote : ' ',
+                    stateTime : Date.now()
+                })
+                member.addState(state);
+                res.json(state);
+            }else{
+                const state = await State.create({
+                    stateNote : req.body.data.stateNote,
+                    stateTime : Date.now(),
+                })
+                member.addState(state);
+                res.json(state);
+            }
         }else{
-            const state = await State.create({
-                stateNote : req.body.data.stateNote,
-                stateTime : Date.now(),
-            })
-            member.addState(state);
-            res.json(state);
+            res.status(406).json("wrong memberId");
         }
     } catch (error) {   
         console.log(error);
@@ -377,14 +407,14 @@ app.get('/admin/:adminId', async (req, res) => {
 
 
 // Log in function
-app.get('/login/:adminId', async (req,res) => {
-    const adminId = req.params.adminId;
+app.post('/login', async (req,res) => {
+    const adminId = req.body.username;
     try {
         const admin = await Admin.findOne({where : {adminId : adminId}});
         if(!admin){
-            res.status(406);
+            res.status(406).json("wrong username");
         }else{
-            res.json(admin);
+            res.status(201).json(admin);
         }
     } catch (error) {
         console.log(error);

@@ -4,3 +4,4 @@ cd 프로젝트 폴더 경로> npx sequelize init
 cd 프로젝트 폴더 경로> npm install cors
 cd 프로젝트 폴더 경로> npm install mime
 cd 프로젝트 폴더 경로> npm install --save multer
+cd 프로젝트 폴더 경로> npm install get-random-values --save
