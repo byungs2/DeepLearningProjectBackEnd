@@ -1,3 +1,12 @@
+//require('@tensorflow/tfjs-node');
+const AWS_SMS = require('aws-sdk');
+const canvas = require('canvas');
+const faceapi = require('face-api.js');
+const { Canvas, Image, ImageData } = canvas
+faceapi.env.monkeyPatch({ Canvas, Image, ImageData })
+AWS_SMS.config.update({region : 'ap-northeast-1'});
+
+//const bodyParser = require('body-parser');
 const express = require('express');
 const path = require('path');
 const morgan = require('morgan');
@@ -16,7 +25,6 @@ const State = require('./models/state');
 // const nunjucks = require('nunjucks');
 // const router = express.Router();
 // const URL = "www.mask-detector.ml";
-
 const storageSet = multer.diskStorage({
     destination: function (req, file,cb){
         cb(null,'./faceImages');
@@ -25,14 +33,30 @@ const storageSet = multer.diskStorage({
         console.log(" === UPLOAD RUNNING === ")
         cb(null, file.originalname);
     }
-})
+});
+const storageFace = multer.diskStorage({
+    destination: function (req, file,cb){
+        cb(null,'./images');
+    },
+    filename: function (req, file, cb){
+        console.log(" === UPLOAD RUNNING === ")
+        cb(null, "tempFace.jpg");
+    }
+});
 //const upload = multer({dest : './images'})
 const upload = multer({storage: storageSet});
+const uploadFace = multer({storage: storageFace});
+
 const app = express();
 const URL = "http://localhost:8082";
-
+const adminURL = "http://localhost:3000/admin";
 
 app.use(cors());
+
+//express에는 body-parser 기능 built-in되어있다
+// app.use(express.json());
+// app.use(express.urlencoded( {extended : false } ));
+//app.use(bodyParser.json);
 
 const { sequelize } = require('./models'); // db.sequelize
 const { UV_FS_O_FILEMAP } = require('constants');
@@ -47,10 +71,25 @@ app.set('port', process.env.PORT || 8082);
 //     watch: true
 // });
 
+// face api model loading 하는 비동기 함수
+async function faceLoader(){
+    try {
+        await faceapi.nets.faceRecognitionNet.loadFromDisk('./weights');
+        await faceapi.nets.faceLandmark68Net.loadFromDisk('./weights');
+        await faceapi.nets.ssdMobilenetv1.loadFromDisk('./weights');
+
+        console.log("==== face recognition model loading complete ====");
+    } catch (error) {
+        console.log(error);
+    }
+}
 
 
 sequelize.sync({ force: false })
     .then(() => {
+        // FaceApi faceRecognitionNet라는 네크워크에 Pretrained weights loading
+        faceLoader();
+
         const masterPassword = new Uint8Array(10);
         getRandomValues(masterPassword);
         let existingMaster = null;
@@ -60,14 +99,16 @@ sequelize.sync({ force: false })
                 console.log("master update");
                 Admin.update({
                     adminId : "master",
-                    adminPw : masterPassword.toString()
+                    adminPw : masterPassword.toString(),
+                    adminPhoneNum : "01020679386"
                 },{ where : {adminId : "master"}});
                 console.log('Master Admin Pw 수정됨 ');
             }else{
                 console.log("master create");
                 Admin.create({
                     adminId : "master",
-                    adminPw : masterPassword.toString()
+                    adminPw : masterPassword.toString(),
+                    adminPhoneNum : "01020679386" 
                 });
                 console.log('Master Admin 생성됨');
             }
@@ -343,43 +384,54 @@ app.get('/admin', async (req,res) => {
 
 // Create One
 app.post('/admin', async (req,res) => {
-    try {
-        const adminId = req.body.data.adminId;
-        const existingAdmin = await Admin.findOne({where : {adminId : adminId}});
-        if(existingAdmin !== null){
-            res.status(406).json(existingAdmin);
-        }else{
-            const admin = await Admin.create({
-                adminId : req.body.data.adminId,
-                adminPw : req.body.data.adminPw
-            });
-            res.json(admin);
+    if(req.body.data.adminPhoneNum.indexOf('-') > -1){
+        res.status(406).json("wrong format of Phone Numbers");
+    }else{
+        try {
+            const adminId = req.body.data.adminId;
+            const existingAdmin = await Admin.findOne({where : {adminId : adminId}});
+            if(existingAdmin !== null){
+                res.status(406).json(existingAdmin);
+            }else{
+                const admin = await Admin.create({
+                    adminId : req.body.data.adminId,
+                    adminPw : req.body.data.adminPw,
+                    adminPhoneNum : req.body.data.adminPhoneNum,
+                });
+                res.json(admin);
+            }
+        } catch (error) {   
+            console.log(error);
         }
-    } catch (error) {   
-        console.log(error);
     }
+
 });
 
 // Update One
 app.put('/admin/:adminId', async (req,res) => {
-    try {
-        const adminId = req.params.adminId;
-        const existingPw = req.body.data.existingPw;
-        const existingAdmin = await Admin.findByPk(adminId);
-        if(existingAdmin.adminPw !== existingPw){
-            res.status(406).json(existingAdmin);
-        }else{
-            const result = await Admin.update({
-                adminId : req.body.data.adminId,
-                adminPw : req.body.data.adminPw,
-            }, {
-                where : { id : adminId }
-            })
-            const admin = await Admin.findByPk(adminId);
-            res.json(admin);
+    if(req.body.data.adminPhoneNum.indexOf('-') > -1){
+        res.status(406).json("wrong format of Phone Numbers");
+    }else{
+        try {
+            const adminId = req.params.adminId;
+            const existingPw = req.body.data.existingPw;
+            const existingAdmin = await Admin.findByPk(adminId);
+            if(existingAdmin.adminPw !== existingPw){
+                res.status(406).json(existingAdmin);
+            }else{
+                const result = await Admin.update({
+                    adminId : req.body.data.adminId,
+                    adminPw : req.body.data.adminPw,
+                    adminPhoneNum : req.body.data.adminPhoneNum,
+                }, {
+                    where : { id : adminId }
+                })
+                const admin = await Admin.findByPk(adminId);
+                res.json(admin);
+            }
+        } catch (error) {
+            console.log(error);
         }
-    } catch (error) {
-        console.log(error);
     }
 });
 
@@ -416,6 +468,65 @@ app.post('/login', async (req,res) => {
         }else{
             res.status(201).json(admin);
         }
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+// iOS로부터 받아온 image request 처리
+app.post('/nomask',uploadFace.single("memberFace"), async (req, res) => {
+    const image = await canvas.loadImage('./images/tempFace.jpg');
+    try {
+        const labeledDesc = [];
+        const members = await Member.findAll();
+        const descFace = await faceapi.detectSingleFace(image).withFaceLandmarks().withFaceDescriptor();
+        for(let i = 0; i < members.length; i++){
+            const idx = members[i].memberFace.indexOf('faceImage');
+            const imagePath = members[i].memberFace.substring(idx);
+            const data = await canvas.loadImage('./' + imagePath);
+            //fs.readFile(imagePath, async (err, data)=>{
+            const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
+            const desc = new faceapi.LabeledFaceDescriptors(members[i].memberName, [singleFaceDesc.descriptor]);
+            labeledDesc.push(desc);
+            //})
+        }
+        const faceMatcher = new faceapi.FaceMatcher(labeledDesc);
+        const bestMatch = faceMatcher.findBestMatch(descFace.descriptor);
+
+        //penalty
+        const name = bestMatch.toString().substring(0,bestMatch.toString().indexOf(' '));
+        const member = await Member.findOne({where : {memberName : name}});
+        await Member.update({
+            memberCount : member.memberCount + 1
+        }, {where : {memberName : name}});
+
+        res.json(bestMatch.toString());
+    } catch (error) {
+
+        console.log(error);
+    }
+});
+
+// iOS로부터 받아온 관리자 request 처리
+app.get('/call', async (req,res)=>{
+    try {
+        //추후 수정이 필요한 부분
+        const adminId = 1;
+        const admin = await Admin.findByPk(adminId);
+        const paramms = {
+            Message : 'Warning',
+            PhoneNumber : '+82' + admin.adminPhoneNum,
+        };
+        const publishTextPromise = new AWS_SMS.SNS({apiVersion: '2019-06-22'}).publish(paramms).promise();
+        publishTextPromise.then(function(data){
+            console.log("MessageID is " + data.MessageId);
+            res.json("true");
+        }).catch(
+            function(err){
+                console.log(err,err.stack);
+                res.json("false");
+            }
+        );
     } catch (error) {
         console.log(error);
     }

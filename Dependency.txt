@@ -1,7 +1,12 @@
-cd 프로젝트 폴더 경로> npm i express morgan nunjucks sequelize sequelize-cli mysql2
-cd 프로젝트 폴더 경로> npm i -D nodemon
-cd 프로젝트 폴더 경로> npx sequelize init
-cd 프로젝트 폴더 경로> npm install cors
-cd 프로젝트 폴더 경로> npm install mime
-cd 프로젝트 폴더 경로> npm install --save multer
-cd 프로젝트 폴더 경로> npm install get-random-values --save
+<모두 cd 프로젝트 폴더 경로 후 설치> 
+npm i express morgan nunjucks sequelize sequelize-cli mysql2
+npm i -D nodemon
+npx sequelize init
+npm install cors
+npm install mime
+npm install --save multer
+npm install get-random-values --save
+node server DNS : www.mask-detector.ml
+npm i face-api.js canvas @tensorflow/tfjs-node
+npm i aws-sdk
+npm install body-parser

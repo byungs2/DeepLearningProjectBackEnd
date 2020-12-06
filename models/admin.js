@@ -16,6 +16,10 @@ class Admin extends Sequelize.Model {
                 type : Sequelize.STRING(45),
                 allowNull : false,
             },
+            adminPhoneNum: {
+                type : Sequelize.STRING(45),
+                allowNull : false,
+            }
         }, {
             sequelize,
             timestamps: false,
