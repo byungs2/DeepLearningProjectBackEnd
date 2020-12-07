@@ -20,6 +20,7 @@ const getRandomValues = require('get-random-values');
 const Member = require('./models/member');
 const Admin = require('./models/admin');
 const State = require('./models/state');
+const Descriptor = require('./models/descriptor');
 
 // router를 사용하지 않고 View도 React로 따로 만드므로 불필요한 부분
 // const nunjucks = require('nunjucks');
@@ -190,6 +191,21 @@ app.post('/member',upload.single('memberFace'),async (req,res) => {
                     memberCount : 0,
                     memberFace : urlPath,
                 });
+
+                const members = await Member.findOne({where : { memberFace : urlPath}});
+                const labeledDesc = [];
+                const idx = members.memberFace.indexOf('faceImage');
+                const imagePath = members.memberFace.substring(idx);
+                const data = await canvas.loadImage('./' + imagePath);
+                const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
+                const desc = new faceapi.LabeledFaceDescriptors(members.memberName, [singleFaceDesc.descriptor]);
+                labeledDesc.push(desc);
+
+                const strDesc = JSON.stringify(labeledDesc);
+                await Descriptor.create({
+                    desc : strDesc
+                })
+
                 res.status(201).json(member);
             }else{
                 const member = await Member.create({
@@ -197,6 +213,21 @@ app.post('/member',upload.single('memberFace'),async (req,res) => {
                     memberCount : req.body.memberCount,
                     memberFace : urlPath,
                 });
+
+                const members = await Member.findOne({where : { memberFace : urlPath}});
+                const labeledDesc = [];
+                const idx = members.memberFace.indexOf('faceImage');
+                const imagePath = members.memberFace.substring(idx);
+                const data = await canvas.loadImage('./' + imagePath);
+                const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
+                const desc = new faceapi.LabeledFaceDescriptors(members.memberName, [singleFaceDesc.descriptor]);
+                labeledDesc.push(desc);
+
+                const strDesc = JSON.stringify(labeledDesc);
+                await Descriptor.create({
+                    desc : strDesc
+                })
+
                 res.status(201).json(member);
             }
         } catch (error) {
@@ -265,6 +296,7 @@ app.delete('/member/:memberId', async (req, res) => {
             }
         })
         const result = await Member.destroy({where : { id : memberId}});
+        await Descriptor.destroy({where : { id : memberId}});
         res.json(result);
     } catch (error) {
         console.log(error);
@@ -474,21 +506,19 @@ app.post('/login', async (req,res) => {
 });
 
 // iOS로부터 받아온 image request 처리
-app.post('/nomask',uploadFace.single("memberFace"), async (req, res) => {
+app.post('/nomask',uploadFace.single("tempFace"), async (req, res) => {
     const image = await canvas.loadImage('./images/tempFace.jpg');
     try {
-        const labeledDesc = [];
-        const members = await Member.findAll();
         const descFace = await faceapi.detectSingleFace(image).withFaceLandmarks().withFaceDescriptor();
-        for(let i = 0; i < members.length; i++){
-            const idx = members[i].memberFace.indexOf('faceImage');
-            const imagePath = members[i].memberFace.substring(idx);
-            const data = await canvas.loadImage('./' + imagePath);
-            //fs.readFile(imagePath, async (err, data)=>{
-            const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
-            const desc = new faceapi.LabeledFaceDescriptors(members[i].memberName, [singleFaceDesc.descriptor]);
+
+        const strDescripotors = await Descriptor.findAll();
+        const labeledDesc = [];
+        for(let i = 0; i < strDescripotors.length; i++){
+            const strD = strDescripotors[i];
+            const memberName = strD.desc.substring(strD.desc.indexOf('label')+8,strD.desc.indexOf('descriptors')-3);
+            const descriptor = Float32Array.from(strD.desc.substring(strD.desc.indexOf('descriptors')+15,strD.desc.length-4).split(','),parseFloat);
+            const desc = new faceapi.LabeledFaceDescriptors(memberName, [descriptor]);
             labeledDesc.push(desc);
-            //})
         }
         const faceMatcher = new faceapi.FaceMatcher(labeledDesc);
         const bestMatch = faceMatcher.findBestMatch(descFace.descriptor);
@@ -502,7 +532,6 @@ app.post('/nomask',uploadFace.single("memberFace"), async (req, res) => {
 
         res.json(bestMatch.toString());
     } catch (error) {
-
         console.log(error);
     }
 });

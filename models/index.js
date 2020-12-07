@@ -2,7 +2,7 @@ const Sequelize = require('sequelize');
 const Member = require('./member');
 const Admin = require('./admin');
 const State = require('./state');
-
+const Descriptor = require('./descriptor');
 
 const env = process.env.NODE_ENV || 'development';
 const config = require('../config/config')[env];
@@ -15,13 +15,17 @@ db.sequelize = sequelize;
 db.Member = Member;
 db.Admin = Admin;
 db.State = State;
+db.Descriptor = Descriptor;
 
 Member.init(sequelize);
 Admin.init(sequelize);
 State.init(sequelize);
+Descriptor.init(sequelize);
+
 
 Member.associate(db);
 Admin.associate(db);
 State.associate(db);
+Descriptor.associate(db);
 
 module.exports = db;
