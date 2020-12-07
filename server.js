@@ -10,8 +10,8 @@ AWS_SMS.config.update({region : 'ap-northeast-1'});
 const express = require('express');
 const path = require('path');
 const morgan = require('morgan');
-const url = require('url');
-const http = require('http');
+// const url = require('url');
+// const http = require('http');
 const fs = require('fs');
 const mime = require('mime');
 const multer = require('multer');
@@ -26,12 +26,13 @@ const Descriptor = require('./models/descriptor');
 // const nunjucks = require('nunjucks');
 // const router = express.Router();
 // const URL = "www.mask-detector.ml";
+
 const storageSet = multer.diskStorage({
     destination: function (req, file,cb){
         cb(null,'./faceImages');
     },
     filename: function (req, file, cb){
-        console.log(" === UPLOAD RUNNING === ")
+        console.log("=== UPLOAD RUNNING === ")
         cb(null, file.originalname);
     }
 });
@@ -40,7 +41,7 @@ const storageFace = multer.diskStorage({
         cb(null,'./images');
     },
     filename: function (req, file, cb){
-        console.log(" === UPLOAD RUNNING === ")
+        console.log("=== UPLOAD RUNNING === ")
         cb(null, "tempFace.jpg");
     }
 });
@@ -522,15 +523,24 @@ app.post('/nomask',uploadFace.single("tempFace"), async (req, res) => {
         }
         const faceMatcher = new faceapi.FaceMatcher(labeledDesc);
         const bestMatch = faceMatcher.findBestMatch(descFace.descriptor);
-
+        const strBestMatch = bestMatch.toString();
         //penalty
-        const name = bestMatch.toString().substring(0,bestMatch.toString().indexOf(' '));
-        const member = await Member.findOne({where : {memberName : name}});
-        await Member.update({
-            memberCount : member.memberCount + 1
-        }, {where : {memberName : name}});
+        const distance = strBestMatch.substring(strBestMatch.indexOf(' ')+2,strBestMatch.length-1);
+        console.log(distance);
 
-        res.json(bestMatch.toString());
+        if(parseFloat(distance) >= 0.6){
+            console.log(strBestMatch);
+            res.json("unknown");
+        }else{
+            console.log(strBestMatch);
+            const name = strBestMatch.substring(0,strBestMatch.indexOf(' '));
+            const member = await Member.findOne({where : {memberName : name}});
+            await Member.update({
+                memberCount : member.memberCount + 1
+            }, {where : {memberName : name}});
+            res.json(name);
+        }
+
     } catch (error) {
         console.log(error);
     }
