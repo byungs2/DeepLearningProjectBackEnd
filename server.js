@@ -249,6 +249,11 @@ app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) =
         }, {
             where: { id: memberId },
         });
+        const descriptor = await Descriptor.findByPk(memberId);
+        const desc = descriptor.desc.replace(member.memberName, req.body.memberName);
+        await Descriptor.update({
+            desc : desc
+        },{where : { id : memberId}});
         const updatedMember = await Member.findByPk(memberId);
         res.status(201).json(updatedMember);
     }else{
@@ -275,6 +280,17 @@ app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) =
                 where: { id: memberId },
             });
             const updatedMember = await Member.findByPk(memberId);
+
+            const labeledDesc = [];
+            const data = await canvas.loadImage('./' + req.file.path);
+            const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
+            const desc = new faceapi.LabeledFaceDescriptors(updatedMember.memberName, [singleFaceDesc.descriptor]);
+            labeledDesc.push(desc);
+            const strDesc = JSON.stringify(labeledDesc);
+            await Descriptor.update({
+                desc : strDesc
+            },{where : { id : memberId}});
+            
             res.json(updatedMember);
         } catch (err) {
             console.log(error);
