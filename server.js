@@ -534,7 +534,7 @@ app.post('/nomask',uploadFace.single("tempFace"), async (req, res) => {
             const strD = strDescripotors[i];
             const memberName = strD.desc.substring(strD.desc.indexOf('label')+8,strD.desc.indexOf('descriptors')-3);
             const descriptor = Float32Array.from(strD.desc.substring(strD.desc.indexOf('descriptors')+15,strD.desc.length-4).split(','),parseFloat);
-            const desc = new faceapi.LabeledFaceDescriptors(memberName, [descriptor]);
+            const desc = new faceapi.LabeledFaceDescriptors(memberName+"/"+strD.id, [descriptor]);
             labeledDesc.push(desc);
         }
         const faceMatcher = new faceapi.FaceMatcher(labeledDesc);
@@ -546,15 +546,16 @@ app.post('/nomask',uploadFace.single("tempFace"), async (req, res) => {
 
         if(parseFloat(distance) >= 0.6){
             console.log(strBestMatch);
-            res.json("unknown");
+            res.json({ "result":"false", "username" : "unknown", "eDistance" : distance });
         }else{
             console.log(strBestMatch);
             const name = strBestMatch.substring(0,strBestMatch.indexOf(' '));
-            const member = await Member.findOne({where : {memberName : name}});
+            const id = parseInt(name.substring(name.indexOf("/")+1));
+            const member = await Member.findOne({where : {id : id}});
             await Member.update({
                 memberCount : member.memberCount + 1
-            }, {where : {memberName : name}});
-            res.json(name);
+            }, {where : {id : id}});
+            res.json({"result" : "true", "username" : name, "count" : member.memberCount + 1, "eDistance" : distance });
         }
 
     } catch (error) {
