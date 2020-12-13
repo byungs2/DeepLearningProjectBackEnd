@@ -170,10 +170,18 @@ app.get('/member/faceImages/:imageName', async (req, res) => {
 app.get('/member', async (req,res) => {
     try {
         const members = await Member.findAll();
+        const partOfMembers = members.slice(req.query._start,req.query._end);
+        partOfMembers.sort(function(a,b){
+            if(req.query._order === 'ASC'){
+                return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+            }else if(req.query._order === 'DESC'){
+                return a.id > b.id ? -1 : a.id < b.id ? 1 : 0;
+            }
+        });
         //Header Setting
         res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
         res.setHeader('X-Total-Count',members.length);
-        res.json(members);
+        res.json(partOfMembers);
     } catch (error) {
         console.log(error);
     }
@@ -338,10 +346,18 @@ app.get('/member/:memberId', async (req, res) => {
 app.get('/state', async (req,res) => {
     try {
         const states = await State.findAll();
+        const partOfStates = states.slice(req.query._start,req.query._end);
+        partOfStates.sort(function(a,b){
+            if(req.query._order === 'ASC'){
+                return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+            }else if(req.query._order === 'DESC'){
+                return a.id > b.id ? -1 : a.id < b.id ? 1 : 0;
+            }
+        });
         //Header Setting
         res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
         res.setHeader('X-Total-Count',states.length);
-        res.json(states);
+        res.json(partOfStates);
     } catch (error) {
         console.log(error);
     }
@@ -422,10 +438,18 @@ app.get('/state/:stateId', async (req, res) => {
 app.get('/admin', async (req,res) => {
     try {
         const admins = await Admin.findAll();
+        const partOfAdmins = admins.slice(req.query._start,req.query._end);
+        partOfAdmins.sort(function(a,b){
+            if(req.query._order === 'ASC'){
+                return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+            }else if(req.query._order === 'DESC'){
+                return a.id > b.id ? -1 : a.id < b.id ? 1 : 0;
+            }
+        });
         //Header Setting
         res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
         res.setHeader('X-Total-Count',admins.length);
-        res.json(admins);
+        res.json(partOfAdmins);
     } catch (error) {
         console.log(error);
     }
