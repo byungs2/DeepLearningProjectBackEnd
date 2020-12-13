@@ -33,6 +33,7 @@ class Member extends Sequelize.Model {
     }
     static associate(db) {
         db.Member.hasMany(db.State);
+        db.Member.hasOne(db.Descriptor);
     }
 };
 

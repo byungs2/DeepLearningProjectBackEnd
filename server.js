@@ -200,21 +200,19 @@ app.post('/member',upload.single('memberFace'),async (req,res) => {
                     memberCount : 0,
                     memberFace : urlPath,
                 });
-
-                const members = await Member.findOne({where : { memberFace : urlPath}});
                 const labeledDesc = [];
-                const idx = members.memberFace.indexOf('faceImage');
-                const imagePath = members.memberFace.substring(idx);
+                const idx = member.memberFace.indexOf('faceImage');
+                const imagePath = member.memberFace.substring(idx);
                 const data = await canvas.loadImage('./' + imagePath);
                 const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
-                const desc = new faceapi.LabeledFaceDescriptors(members.memberName, [singleFaceDesc.descriptor]);
+                const desc = new faceapi.LabeledFaceDescriptors(member.memberName, [singleFaceDesc.descriptor]);
                 labeledDesc.push(desc);
 
                 const strDesc = JSON.stringify(labeledDesc);
-                await Descriptor.create({
-                    desc : strDesc
-                })
-
+                const descriptor = await Descriptor.create({
+                    desc : strDesc,
+                    MemberId : member.id
+                });
                 res.status(201).json(member);
             }else{
                 const member = await Member.create({
@@ -222,21 +220,20 @@ app.post('/member',upload.single('memberFace'),async (req,res) => {
                     memberCount : req.body.memberCount,
                     memberFace : urlPath,
                 });
-
-                const members = await Member.findOne({where : { memberFace : urlPath}});
                 const labeledDesc = [];
-                const idx = members.memberFace.indexOf('faceImage');
-                const imagePath = members.memberFace.substring(idx);
+                const idx = member.memberFace.indexOf('faceImage');
+                const imagePath = member.memberFace.substring(idx);
                 const data = await canvas.loadImage('./' + imagePath);
                 const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
-                const desc = new faceapi.LabeledFaceDescriptors(members.memberName, [singleFaceDesc.descriptor]);
+                const desc = new faceapi.LabeledFaceDescriptors(member.memberName, [singleFaceDesc.descriptor]);
                 labeledDesc.push(desc);
 
                 const strDesc = JSON.stringify(labeledDesc);
-                await Descriptor.create({
-                    desc : strDesc
-                })
-
+                const descriptor = await Descriptor.create({
+                    desc : strDesc,
+                    MemberId : member.id
+                });
+                member.addDescriptor(descriptor);
                 res.status(201).json(member);
             }
         } catch (error) {
@@ -261,7 +258,7 @@ app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) =
         const desc = descriptor.desc.replace(member.memberName, req.body.memberName);
         await Descriptor.update({
             desc : desc
-        },{where : { id : memberId}});
+        },{where : { MemberId : memberId}});
         const updatedMember = await Member.findByPk(memberId);
         res.status(201).json(updatedMember);
     }else{
@@ -297,7 +294,7 @@ app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) =
             const strDesc = JSON.stringify(labeledDesc);
             await Descriptor.update({
                 desc : strDesc
-            },{where : { id : memberId}});
+            },{where : { MemberId : memberId}});
             
             res.json(updatedMember);
         } catch (err) {
@@ -320,8 +317,8 @@ app.delete('/member/:memberId', async (req, res) => {
                 console.log("===== delete image complete =====");
             }
         })
+        await Descriptor.destroy({where : { MemberId : memberId}});
         const result = await Member.destroy({where : { id : memberId}});
-        await Descriptor.destroy({where : { id : memberId}});
         res.json(result);
     } catch (error) {
         console.log(error);
