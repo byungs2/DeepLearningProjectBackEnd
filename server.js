@@ -193,51 +193,60 @@ app.post('/member',upload.single('memberFace'),async (req,res) => {
         res.status(201).json(req.body);
     }else{
         const urlPath = URL + req.url + "/" + req.file.path;
-        try {
-            if(req.body.memberCount === "undefined"){
-                const member = await Member.create({
-                    memberName : req.body.memberName,
-                    memberCount : 0,
-                    memberFace : urlPath,
-                });
-                const labeledDesc = [];
-                const idx = member.memberFace.indexOf('faceImage');
-                const imagePath = member.memberFace.substring(idx);
-                const data = await canvas.loadImage('./' + imagePath);
-                const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
-                const desc = new faceapi.LabeledFaceDescriptors(member.memberName, [singleFaceDesc.descriptor]);
-                labeledDesc.push(desc);
-
-                const strDesc = JSON.stringify(labeledDesc);
-                const descriptor = await Descriptor.create({
-                    desc : strDesc,
-                    MemberId : member.id
-                });
-                res.status(201).json(member);
-            }else{
-                const member = await Member.create({
-                    memberName : req.body.memberName,
-                    memberCount : req.body.memberCount,
-                    memberFace : urlPath,
-                });
-                const labeledDesc = [];
-                const idx = member.memberFace.indexOf('faceImage');
-                const imagePath = member.memberFace.substring(idx);
-                const data = await canvas.loadImage('./' + imagePath);
-                const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
-                const desc = new faceapi.LabeledFaceDescriptors(member.memberName, [singleFaceDesc.descriptor]);
-                labeledDesc.push(desc);
-
-                const strDesc = JSON.stringify(labeledDesc);
-                const descriptor = await Descriptor.create({
-                    desc : strDesc,
-                    MemberId : member.id
-                });
-                member.addDescriptor(descriptor);
-                res.status(201).json(member);
+        const existMember = await Member.findOne({where : { memberId : req.body.memberId }});
+        if(existMember !== null){
+            res.status(406).json("existMember");
+        }else{
+            try {
+                if(req.body.memberCount === "undefined"){
+                    const member = await Member.create({
+                        memberId : req.body.memberId,
+                        memberPw : req.body.memberPw,
+                        memberName : req.body.memberName,
+                        memberCount : 0,
+                        memberFace : urlPath,
+                    });
+                    const labeledDesc = [];
+                    const idx = member.memberFace.indexOf('faceImage');
+                    const imagePath = member.memberFace.substring(idx);
+                    const data = await canvas.loadImage('./' + imagePath);
+                    const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
+                    const desc = new faceapi.LabeledFaceDescriptors(member.memberName, [singleFaceDesc.descriptor]);
+                    labeledDesc.push(desc);
+    
+                    const strDesc = JSON.stringify(labeledDesc);
+                    const descriptor = await Descriptor.create({
+                        desc : strDesc,
+                        MemberId : member.id
+                    });
+                    res.status(201).json(member);
+                }else{
+                    const member = await Member.create({
+                        memberId : req.body.memberId,
+                        memberPw : req.body.memberPw,
+                        memberName : req.body.memberName,
+                        memberCount : req.body.memberCount,
+                        memberFace : urlPath,
+                    });
+                    const labeledDesc = [];
+                    const idx = member.memberFace.indexOf('faceImage');
+                    const imagePath = member.memberFace.substring(idx);
+                    const data = await canvas.loadImage('./' + imagePath);
+                    const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
+                    const desc = new faceapi.LabeledFaceDescriptors(member.memberName, [singleFaceDesc.descriptor]);
+                    labeledDesc.push(desc);
+    
+                    const strDesc = JSON.stringify(labeledDesc);
+                    const descriptor = await Descriptor.create({
+                        desc : strDesc,
+                        MemberId : member.id
+                    });
+                    member.addDescriptor(descriptor);
+                    res.status(201).json(member);
+                }
+            } catch (error) {
+                console.log(error);
             }
-        } catch (error) {
-            console.log(error);
         }
     }
 });
@@ -248,6 +257,8 @@ app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) =
         const memberId = req.params.memberId;
         const member = await Member.findByPk(memberId);
         const result = await Member.update({
+            memberId : req.body.memberId,
+            memberPw : req.body.memberPw,
             memberName: req.body.memberName,
             memberCount : req.body.memberCount,
             memberFace : member.memberFace,
@@ -278,6 +289,8 @@ app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) =
             }
             const urlPath = URL + '/member/' + req.file.path;
             const result = await Member.update({
+                memberId : req.body.memberId,
+                memberPw : req.body.memberPw,
                 memberName: req.body.memberName,
                 memberCount : req.body.memberCount,
                 memberFace : urlPath,
@@ -285,7 +298,6 @@ app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) =
                 where: { id: memberId },
             });
             const updatedMember = await Member.findByPk(memberId);
-
             const labeledDesc = [];
             const data = await canvas.loadImage('./' + req.file.path);
             const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
@@ -295,7 +307,6 @@ app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) =
             await Descriptor.update({
                 desc : strDesc
             },{where : { MemberId : memberId}});
-            
             res.json(updatedMember);
         } catch (err) {
             console.log(error);
@@ -527,8 +538,22 @@ app.get('/admin/:adminId', async (req, res) => {
     }
 });
 
+// member log in function 
+app.post('/memberlogin', async (req,res) => {
+    const memberId = req.body.username;
+    try {
+        const member = await Member.findOne({where : {memberId : memberId}});
+        if(!member){
+            res.status(406).json("wrong username");
+        }else{
+            res.status(201).json(member);
+        }
+    } catch (error) {
+        console.log(error);
+    }
+});
 
-// Log in function
+// admin Log in function
 app.post('/login', async (req,res) => {
     const adminId = req.body.username;
     try {

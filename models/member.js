@@ -8,6 +8,14 @@ class Member extends Sequelize.Model {
                 primaryKey: true,
                 autoIncrement : true,
             },
+            memberId : {
+                type: Sequelize.STRING(45),
+                allowNull : false,
+            },
+            memberPw : {
+                type: Sequelize.STRING(45),
+                allowNull : false,
+            },
             memberName: {
                 type: Sequelize.STRING(45),
                 allowNull : false,
