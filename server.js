@@ -176,9 +176,8 @@ app.get('/member', async (req,res) => {
         if(searchStr !== undefined){
             const field = req.query._sort;
             const members = await Member.findAll({where : { memberId : {[Op.like] : "%"+searchStr+"%"}}});
-            const partOfMembers = members.slice(req.query._start,req.query._end);
             if(field === "id"){
-                partOfMembers.sort(function(a,b){
+                members.sort(function(a,b){
                     if(req.query._order === 'ASC'){
                         return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
                     }else if(req.query._order === 'DESC'){
@@ -186,7 +185,7 @@ app.get('/member', async (req,res) => {
                     }
                 });
             }else if(field === "memberCount"){
-                partOfMembers.sort(function(a,b){
+                members.sort(function(a,b){
                     if(req.query._order === 'ASC'){
                         return a.memberCount < b.memberCount ? -1 : a.memberCount > b.memberCount ? 1 : 0;
                     }else if(req.query._order === 'DESC'){
@@ -194,6 +193,7 @@ app.get('/member', async (req,res) => {
                     }
                 });
             }
+            const partOfMembers = members.slice(req.query._start,req.query._end);
             //Header Setting
             res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
             res.setHeader('X-Total-Count',members.length);
@@ -201,9 +201,8 @@ app.get('/member', async (req,res) => {
         }else{
             const field = req.query._sort;
             const members = await Member.findAll();
-            const partOfMembers = members.slice(req.query._start,req.query._end);
             if(field === "id"){
-                partOfMembers.sort(function(a,b){
+                members.sort(function(a,b){
                     if(req.query._order === 'ASC'){
                         return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
                     }else if(req.query._order === 'DESC'){
@@ -211,7 +210,7 @@ app.get('/member', async (req,res) => {
                     }
                 });
             }else if(field === "memberCount"){
-                partOfMembers.sort(function(a,b){
+                members.sort(function(a,b){
                     if(req.query._order === 'ASC'){
                         return a.memberCount < b.memberCount ? -1 : a.memberCount > b.memberCount ? 1 : 0;
                     }else if(req.query._order === 'DESC'){
@@ -219,6 +218,7 @@ app.get('/member', async (req,res) => {
                     }
                 });
             }
+            const partOfMembers = members.slice(req.query._start,req.query._end);
             //Header Setting
             res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
             res.setHeader('X-Total-Count',members.length);
