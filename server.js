@@ -155,7 +155,7 @@ app.get('/member/faceImages/:imageName', async (req, res) => {
         fs.readFile(imagePath, (err,data) => {
             if(err){
                 res.writeHead(500,{'Content-Type':'text/html'});
-                res.end('500 Internal Server '+error);
+                res.end('500 Internal Server '+err);
             }else{
                 res.writeHead(200, {'Content-Type':imageMime});
                 res.end(data);
@@ -283,7 +283,6 @@ app.post('/member',upload.single('memberFace'),async (req,res) => {
                         desc : strDesc,
                         MemberId : member.id
                     });
-                    member.addDescriptor(descriptor);
                     res.status(201).json(member);
                 }
             } catch (error) {
