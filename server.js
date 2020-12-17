@@ -442,19 +442,38 @@ app.get('/member/:memberId', async (req, res) => {
 // Read all
 app.get('/state', async (req,res) => {
     try {
-        const states = await State.findAll();
-        const partOfStates = states.slice(req.query._start,req.query._end);
-        partOfStates.sort(function(a,b){
-            if(req.query._order === 'ASC'){
-                return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-            }else if(req.query._order === 'DESC'){
-                return a.id > b.id ? -1 : a.id < b.id ? 1 : 0;
-            }
-        });
-        //Header Setting
-        res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
-        res.setHeader('X-Total-Count',states.length);
-        res.json(partOfStates);
+        const Op = sq.Op;
+        const searchStr = req.query.q;
+        if(searchStr !== undefined){
+            const states = await State.findAll({where : { stateTime : {[Op.like] : "%"+searchStr+"%"}}});
+            // const members = await Member.findOne({where : {memberId :searchStr}});
+            // const states = members.getStates();
+            const partOfStates = states.slice(req.query._start,req.query._end);
+            partOfStates.sort(function(a,b){
+                if(req.query._order === 'ASC'){
+                    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+                }else if(req.query._order === 'DESC'){
+                    return a.id > b.id ? -1 : a.id < b.id ? 1 : 0;
+                }
+            });
+            res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
+            res.setHeader('X-Total-Count',states.length);
+            res.json(partOfStates);
+        }else{
+            const states = await State.findAll();
+            const partOfStates = states.slice(req.query._start,req.query._end);
+            partOfStates.sort(function(a,b){
+                if(req.query._order === 'ASC'){
+                    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+                }else if(req.query._order === 'DESC'){
+                    return a.id > b.id ? -1 : a.id < b.id ? 1 : 0;
+                }
+            });
+            //Header Setting
+            res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
+            res.setHeader('X-Total-Count',states.length);
+            res.json(partOfStates);
+        }
     } catch (error) {
         console.log(error);
     }
@@ -534,19 +553,37 @@ app.get('/state/:stateId', async (req, res) => {
 // Read all
 app.get('/admin', async (req,res) => {
     try {
-        const admins = await Admin.findAll();
-        const partOfAdmins = admins.slice(req.query._start,req.query._end);
-        partOfAdmins.sort(function(a,b){
-            if(req.query._order === 'ASC'){
-                return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-            }else if(req.query._order === 'DESC'){
-                return a.id > b.id ? -1 : a.id < b.id ? 1 : 0;
-            }
-        });
-        //Header Setting
-        res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
-        res.setHeader('X-Total-Count',admins.length);
-        res.json(partOfAdmins);
+        const Op = sq.Op;
+        const searchStr = req.query.q;
+        if(searchStr !== undefined){
+            const admins = await Admin.findAll({where : { adminId : {[Op.like] : "%"+searchStr+"%"}}});
+            const partOfAdmins = admins.slice(req.query._start,req.query._end);
+            partOfAdmins.sort(function(a,b){
+                if(req.query._order === 'ASC'){
+                    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+                }else if(req.query._order === 'DESC'){
+                    return a.id > b.id ? -1 : a.id < b.id ? 1 : 0;
+                }
+            });
+            //Header Setting
+            res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
+            res.setHeader('X-Total-Count',admins.length);
+            res.json(partOfAdmins);
+        }else{
+            const admins = await Admin.findAll();
+            const partOfAdmins = admins.slice(req.query._start,req.query._end);
+            partOfAdmins.sort(function(a,b){
+                if(req.query._order === 'ASC'){
+                    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+                }else if(req.query._order === 'DESC'){
+                    return a.id > b.id ? -1 : a.id < b.id ? 1 : 0;
+                }
+            });
+            //Header Setting
+            res.setHeader('Access-Control-Expose-Headers','X-Total-Count');
+            res.setHeader('X-Total-Count',admins.length);
+            res.json(partOfAdmins);
+        }
     } catch (error) {
         console.log(error);
     }
