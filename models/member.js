@@ -41,7 +41,7 @@ class Member extends Sequelize.Model {
     }
     static associate(db) {
         db.Member.hasMany(db.State);
-        db.Member.hasOne(db.Descriptor);
+        db.Member.hasOne(db.Descriptor,{foreignKey:{unique: true}});
     }
 };
 

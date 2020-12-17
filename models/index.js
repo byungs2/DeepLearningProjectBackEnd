@@ -18,14 +18,14 @@ db.State = State;
 db.Descriptor = Descriptor;
 
 Member.init(sequelize);
-Admin.init(sequelize);
 State.init(sequelize);
 Descriptor.init(sequelize);
-
+Admin.init(sequelize);
 
 Member.associate(db);
 Admin.associate(db);
 State.associate(db);
 Descriptor.associate(db);
+
 
 module.exports = db;

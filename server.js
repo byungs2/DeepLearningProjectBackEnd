@@ -89,7 +89,7 @@ async function faceLoader(){
 }
 
 
-sequelize.sync({ force: false })
+sequelize.sync({ force: true })
     .then(() => {
         // FaceApi faceRecognitionNet라는 네크워크에 Pretrained weights loading
         faceLoader();
@@ -120,6 +120,8 @@ sequelize.sync({ force: false })
             console.log("==== masterPw : " + masterPassword.toString() + " ====");
             console.log("==== YOU SHOULD TYPE EVERY COMMA IN MASTER PASSWORD TO GET AUTH ===");
         });
+        Descriptor.destroy({where : { MemberId : null }});
+        console.log("==== junk data destroyed ====");
         console.log('데이터베이스 연결됨');
     }).catch((err) => {
         console.error(err);
@@ -259,8 +261,8 @@ app.post('/member',upload.single('memberFace'),async (req,res) => {
                     const strDesc = JSON.stringify(labeledDesc);
                     const descriptor = await Descriptor.create({
                         desc : strDesc,
-                        MemberId : member.id
                     });
+                    member.setDescriptor(descriptor);
                     res.status(201).json(member);
                 }else{
                     const member = await Member.create({
@@ -281,45 +283,15 @@ app.post('/member',upload.single('memberFace'),async (req,res) => {
                     const strDesc = JSON.stringify(labeledDesc);
                     const descriptor = await Descriptor.create({
                         desc : strDesc,
-                        MemberId : member.id
                     });
+                    member.setDescriptor(descriptor);
                     res.status(201).json(member);
                 }
             } catch (error) {
                 console.log(error);
-            }
-        }
-    }
-});
-
-// Update one 
-app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) => {
-    if(!req.file){
-        const memberId = req.params.memberId;
-        const member = await Member.findByPk(memberId);
-        const result = await Member.update({
-            memberId : req.body.memberId,
-            memberPw : req.body.memberPw,
-            memberName: req.body.memberName,
-            memberCount : req.body.memberCount,
-            memberFace : member.memberFace,
-        }, {
-            where: { id: memberId },
-        });
-        const descriptor = await Descriptor.findByPk(memberId);
-        const desc = descriptor.desc.replace(member.memberName, req.body.memberName);
-        await Descriptor.update({
-            desc : desc
-        },{where : { MemberId : memberId}});
-        const updatedMember = await Member.findByPk(memberId);
-        res.status(201).json(updatedMember);
-    }else{
-        try {
-            const memberId = req.params.memberId;
-            const member = await Member.findByPk(memberId);
-            const idx = member.memberFace.indexOf('faceImage');
-            const imagePath = member.memberFace.substring(idx);
-            if(req.file.path !== imagePath){
+                const member = await Member.findOne({where : { memberId : req.body.memberId}});
+                const idx = member.memberFace.indexOf('faceImage');
+                const imagePath = member.memberFace.substring(idx);
                 fs.unlink(imagePath, (err,data)=>{
                     if(err){
                         console.log(err);
@@ -327,32 +299,108 @@ app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) =
                         console.log("===== delete image complete =====");
                     }
                 })
+                Descriptor.destroy({where : { MemberId : member.id}});
+                member.destroy();
+                
+                console.log("===== Can not find any face from picture or Can not create member object or Can not load image from node server =====");
+                res.status(406).json({"result" : "create failed"});
             }
-            const urlPath = URL + '/member/' + req.file.path;
+        }
+    }
+});
+
+// Update one 
+app.put('/member/:memberId',upload.single('updateMemberFace') ,async (req,res) => {
+    const memberId = req.params.memberId;
+    if(memberId === "wrong"){
+        res.status(406).json({"result" : "update failed"});
+    }else{
+        const exMember = await Member.findByPk(memberId);
+        const exDescriptor = await Descriptor.findOne({where : { MemberId : memberId}});
+    
+        if(!req.file){
+            const member = await Member.findByPk(memberId);
             const result = await Member.update({
                 memberId : req.body.memberId,
                 memberPw : req.body.memberPw,
                 memberName: req.body.memberName,
                 memberCount : req.body.memberCount,
-                memberFace : urlPath,
+                memberFace : member.memberFace,
             }, {
                 where: { id: memberId },
             });
-            const updatedMember = await Member.findByPk(memberId);
-            const labeledDesc = [];
-            const data = await canvas.loadImage('./' + req.file.path);
-            const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
-            const desc = new faceapi.LabeledFaceDescriptors(updatedMember.memberName, [singleFaceDesc.descriptor]);
-            labeledDesc.push(desc);
-            const strDesc = JSON.stringify(labeledDesc);
+            const descriptor = await Descriptor.findOne({where : { MemberId : memberId}});
+            const desc = descriptor.desc.replace(member.memberName, req.body.memberName);
             await Descriptor.update({
-                desc : strDesc
+                desc : desc
             },{where : { MemberId : memberId}});
-            res.json(updatedMember);
-        } catch (err) {
-            console.log(error);
+            const updatedMember = await Member.findByPk(memberId);
+            res.status(201).json(updatedMember);
+        }else{
+            try {
+                const member = await Member.findByPk(memberId);
+                const idx = member.memberFace.indexOf('faceImage');
+                const imagePath = member.memberFace.substring(idx);
+                const urlPath = URL + '/member/' + req.file.path;
+                const result = await Member.update({
+                    memberId : req.body.memberId,
+                    memberPw : req.body.memberPw,
+                    memberName: req.body.memberName,
+                    memberCount : req.body.memberCount,
+                    memberFace : urlPath,
+                }, {
+                    where: { id: memberId },
+                });
+                const updatedMember = await Member.findByPk(memberId);
+                const labeledDesc = [];
+                const data = await canvas.loadImage('./' + req.file.path);
+                const singleFaceDesc = await faceapi.detectSingleFace(data).withFaceLandmarks().withFaceDescriptor();
+                const desc = new faceapi.LabeledFaceDescriptors(updatedMember.memberName, [singleFaceDesc.descriptor]);
+                labeledDesc.push(desc);
+                const strDesc = JSON.stringify(labeledDesc);
+                await Descriptor.update({
+                    desc : strDesc
+                },{where : { MemberId : memberId}});
+                if(req.file.path !== imagePath){
+                    fs.unlink(imagePath, (err,data)=>{
+                        if(err){
+                            console.log(err);
+                        }else{
+                            console.log("===== delete image complete =====");
+                        }
+                    })
+                }
+                res.json(updatedMember);
+            } catch (err) {
+                console.log(err);
+                const member = await Member.findByPk(memberId)
+                const idx = member.memberFace.indexOf('faceImage');
+                const imagePath = member.memberFace.substring(idx);
+                fs.unlink(imagePath, (err,data)=>{
+                    if(err){
+                        console.log(err);
+                    }else{
+                        console.log("===== delete image complete =====");
+                    }
+                })
+                await Member.update({
+                    memberId : exMember.memberId,
+                    memberPw : exMember.memberPw,
+                    memberName: exMember.memberName,
+                    memberCount : exMember.memberCount,
+                    memberFace : exMember.memberFace,
+                }, {where : {id : memberId}});
+    
+                await Descriptor.update({
+                    desc : exDescriptor.desc,
+                }, {where : { MemberId : memberId }});
+    
+                console.log("===== Can not find any face from picture or Can not create member object or Can not load image from node server =====");
+                res.status(406).json({"id" : "wrong"});
+            }
         }
     }
+
 });
 
 // Delete one
@@ -614,7 +662,6 @@ app.post('/nomask',uploadFace.single("tempFace"), async (req, res) => {
     const image = await canvas.loadImage('./images/tempFace.jpg');
     try {
         const descFace = await faceapi.detectSingleFace(image).withFaceLandmarks().withFaceDescriptor();
-
         const strDescripotors = await Descriptor.findAll();
         const labeledDesc = [];
         for(let i = 0; i < strDescripotors.length; i++){
@@ -630,7 +677,7 @@ app.post('/nomask',uploadFace.single("tempFace"), async (req, res) => {
         //penalty
         const distance = strBestMatch.substring(strBestMatch.indexOf(' ')+2,strBestMatch.length-1);
         console.log(distance);
-
+        
         if(parseFloat(distance) >= 0.6){
             console.log(strBestMatch);
             res.json({ "result":"false", "username" : "unknown", "eDistance" : distance });
@@ -647,6 +694,7 @@ app.post('/nomask',uploadFace.single("tempFace"), async (req, res) => {
 
     } catch (error) {
         console.log(error);
+        res.json({"result" : "false", "message" : "Can not find any face from picture"});
     }
 });
 
@@ -663,11 +711,11 @@ app.get('/call', async (req,res)=>{
         const publishTextPromise = new AWS_SMS.SNS({apiVersion: '2019-06-22'}).publish(paramms).promise();
         publishTextPromise.then(function(data){
             console.log("MessageID is " + data.MessageId);
-            res.json("true");
+            res.json(true);
         }).catch(
             function(err){
                 console.log(err,err.stack);
-                res.json("false");
+                res.json(false);
             }
         );
     } catch (error) {
