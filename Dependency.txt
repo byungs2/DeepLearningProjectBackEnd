@@ -1,5 +1,6 @@
 <모두 cd 프로젝트 폴더 경로 후 설치> 
 npm i express morgan nunjucks sequelize sequelize-cli mysql2
+npm install -g npx or sudo npm i -g npx
 npm i -D nodemon
 npx sequelize init
 npm install cors
