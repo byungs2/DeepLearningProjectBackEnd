@@ -42,7 +42,12 @@ const storageFace = multer.diskStorage({
     },
     filename: function (req, file, cb){
         console.log("=== UPLOAD RUNNING === ")
-        cb(null, "tempFace.jpg");
+        console.log(file.originalname);
+        const ext = file.originalname.substring(file.originalname.indexOf('.'));
+        const filename = JSON.stringify(Date.now());
+        const date = parseInt(filename) + 540 * 60 * 1000;
+        
+        cb(null, date.toString()+ext);
     }
 });
 //const upload = multer({dest : './images'})
@@ -64,6 +69,7 @@ const { sequelize } = require('./models'); // db.sequelize
 const { UV_FS_O_FILEMAP } = require('constants');
 //const { Sequelize } = require('sequelize/types');
 const sq = require('sequelize');
+const { isNullOrUndefined } = require('util');
 
 //MySQL DB와 연동
 app.set('port', process.env.PORT || 8082);
@@ -153,6 +159,25 @@ app.get('/member/faceImages/:imageName', async (req, res) => {
     try {
         const imageName = req.params.imageName;
         const imagePath = "faceImages/" + imageName;
+        const imageMime = mime.getType(imagePath);
+        fs.readFile(imagePath, (err,data) => {
+            if(err){
+                res.writeHead(500,{'Content-Type':'text/html'});
+                res.end('500 Internal Server '+err);
+            }else{
+                res.writeHead(200, {'Content-Type':imageMime});
+                res.end(data);
+            }
+        });
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+app.get('/nomask/images/:imageName', async (req, res) => {
+    try {
+        const imageName = req.params.imageName;
+        const imagePath = "images/" + imageName;
         const imageMime = mime.getType(imagePath);
         fs.readFile(imagePath, (err,data) => {
             if(err){
@@ -410,6 +435,21 @@ app.delete('/member/:memberId', async (req, res) => {
         const member = await Member.findOne({where : { id : memberId}});
         const idx = member.memberFace.indexOf('faceImage');
         const imagePath = member.memberFace.substring(idx);
+        const states = await State.findAll({where : { MemberId : memberId }});
+        for(let i = 0; i < states.length; i++){
+            const state = states[i];
+            if(state.stateFace !== null){
+                const stateIdx = state.stateFace.indexOf('images');
+                const stateImagePath = state.stateFace.substring(stateIdx);
+                fs.unlink(stateImagePath, (err,data)=>{
+                    if(err){
+                        console.log(err);
+                    }else{
+                        console.log("===== delete image complete =====");
+                    }
+                })
+            }
+        }
         fs.unlink(imagePath, (err,data)=>{
             if(err){
                 console.log(err);
@@ -446,7 +486,7 @@ app.get('/state', async (req,res) => {
         const Op = sq.Op;
         const searchStr = req.query.q;
         if(searchStr !== undefined){
-            const states = await State.findAll({where : { stateTime : {[Op.like] : "%"+searchStr+"%"}}});
+            const states = await State.findAll({where : { MemberId : {[Op.like] : "%"+searchStr+"%"}}});
             // const members = await Member.findOne({where : {memberId :searchStr}});
             // const states = members.getStates();
             const partOfStates = states.slice(req.query._start,req.query._end);
@@ -483,20 +523,22 @@ app.get('/state', async (req,res) => {
 // Create One
 app.post('/state', async (req,res) => {
     try {
+        const strDate = JSON.stringify(Date.now());
+        const date = new Date(parseInt(strDate) + 540 * 60 * 1000);
         const memberId = req.body.data.memberId;
         const member = await Member.findOne({where : { id : memberId}});
         if(member !== null){
             if(req.body.data.stateNote === "undefined"){
                 const state = await State.create({
                     stateNote : ' ',
-                    stateTime : Date.now()
+                    stateTime : date
                 })
                 member.addState(state);
                 res.json(state);
             }else{
                 const state = await State.create({
                     stateNote : req.body.data.stateNote,
-                    stateTime : Date.now(),
+                    stateTime : date,
                 })
                 member.addState(state);
                 res.json(state);
@@ -515,7 +557,6 @@ app.put('/state/:stateId', async (req,res) => {
         const stateId = req.params.stateId;
         const result = await State.update({
             stateNote : req.body.data.stateNote,
-            stateDate : Date.now(),
         }, {
             where : { id : stateId }
         })
@@ -530,8 +571,23 @@ app.put('/state/:stateId', async (req,res) => {
 app.delete('/state/:stateId', async (req, res) => {
     try {
         const stateId = req.params.stateId;
-        const result = await State.destroy({ where : { id : stateId }});
-        res.json(result)
+        const state = await State.findOne({where : { id : stateId}});
+        if(state.stateFace !== null){
+            const idx = state.stateFace.indexOf('images');
+            const imagePath = state.stateFace.substring(idx);
+            fs.unlink(imagePath, (err,data)=>{
+                if(err){
+                    console.log(err);
+                }else{
+                    console.log("===== delete image complete =====");
+                }
+            });
+            const result = await State.destroy({ where : { id : stateId }});
+            res.json(result)
+        }else{
+            const result = await State.destroy({ where : { id : stateId }});
+            res.json(result)
+        }
     } catch (error) {
         console.log(error);
     }
@@ -697,7 +753,11 @@ app.post('/login', async (req,res) => {
 
 // iOS로부터 받아온 image request 처리
 app.post('/nomask',uploadFace.single("tempFace"), async (req, res) => {
-    const image = await canvas.loadImage('./images/tempFace.jpg');
+    const urlPath = URL + req.url + "/" + req.file.path;
+    const imagePath = './'+req.file.path;
+    const image = await canvas.loadImage(imagePath);
+    const strDate = JSON.stringify(Date.now());
+    const date = new Date(parseInt(strDate) + 540 * 60 * 1000);
     try {
         const descFace = await faceapi.detectSingleFace(image).withFaceLandmarks().withFaceDescriptor();
         const strDescripotors = await Descriptor.findAll();
@@ -718,6 +778,13 @@ app.post('/nomask',uploadFace.single("tempFace"), async (req, res) => {
         
         if(parseFloat(distance) >= 0.6){
             console.log(strBestMatch);
+            fs.unlink(imagePath, (err,data)=>{
+                if(err){
+                    console.log(err);
+                }else{
+                    console.log("===== delete image complete =====");
+                }
+            });
             res.json({ "result":"false", "username" : "unknown", "eDistance" : distance });
         }else{
             console.log(strBestMatch);
@@ -727,11 +794,24 @@ app.post('/nomask',uploadFace.single("tempFace"), async (req, res) => {
             await Member.update({
                 memberCount : member.memberCount + 1
             }, {where : {id : id}});
+            const state = await State.create({
+                stateNode : ' ',
+                stateTime : date,
+                stateFace : urlPath
+            });
+            member.addState(state);
             res.json({"result" : "true", "username" : name, "count" : member.memberCount + 1, "eDistance" : distance });
         }
 
     } catch (error) {
         console.log(error);
+        fs.unlink(imagePath, (err,data)=>{
+            if(err){
+                console.log(err);
+            }else{
+                console.log("===== delete image complete =====");
+            }
+        });
         res.json({"result" : "false", "message" : "Can not find any face from picture"});
     }
 });

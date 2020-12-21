@@ -16,6 +16,10 @@ class State extends Sequelize.Model {
                 type : Sequelize.STRING(100),
                 allowNull : true,
             },
+            stateFace: {
+                type : Sequelize.STRING(100),
+                allowNull : true,
+            },
         }, {
             sequelize,
             timestamps: false,
