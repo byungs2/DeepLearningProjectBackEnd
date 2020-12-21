@@ -592,7 +592,7 @@ app.get('/admin', async (req,res) => {
 
 // Create One
 app.post('/admin', async (req,res) => {
-    if(req.body.data.adminPhoneNum.indexOf('-') > -1){
+    if(!/^\d+$/.test(req.body.data.adminPhoneNum)){
         res.status(406).json("wrong format of Phone Numbers");
     }else{
         try {
@@ -617,7 +617,7 @@ app.post('/admin', async (req,res) => {
 
 // Update One
 app.put('/admin/:adminId', async (req,res) => {
-    if(req.body.data.adminPhoneNum.indexOf('-') > -1){
+    if(!/^\d+$/.test(req.body.data.adminPhoneNum)){
         res.status(406).json("wrong format of Phone Numbers");
     }else{
         try {
