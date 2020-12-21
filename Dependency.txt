@@ -11,3 +11,4 @@ node server DNS : www.mask-detector.ml
 npm i face-api.js canvas @tensorflow/tfjs-node
 npm i aws-sdk
 npm install body-parser
+tfjs 1.7.0 

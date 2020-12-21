@@ -418,6 +418,7 @@ app.delete('/member/:memberId', async (req, res) => {
             }
         })
         await Descriptor.destroy({where : { MemberId : memberId}});
+        await State.destroy({where : {MemberId : memberId}});
         const result = await Member.destroy({where : { id : memberId}});
         res.json(result);
     } catch (error) {
